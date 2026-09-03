@@ -2,8 +2,7 @@ const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const User = require("../models/user.model");
 
-const users = [];
-
+// Register
 const register = async (req, res) => {
     try {
         const { name, email, password, role } = req.body;
@@ -16,37 +15,37 @@ const register = async (req, res) => {
             });
         }
 
-        // Check if user already exists
-        const existingUser = users.find(
-            user => user.email.toLowerCase() === email.toLowerCase()
-        );
+        // Check if user already exists in MongoDB
+        const existingUser = await User.findOne({
+            email: email.toLowerCase()
+        });
 
         if (existingUser) {
             return res.status(409).json({
                 success: false,
-                message: "A user with this email already exists"
+                message: "User with this email already exists"
             });
         }
 
         // Hash password
-        const hashedPassword = await bcrypt.hash(password, 12);
+        const hashedPassword = await bcrypt.hash(password, 10);
 
         // Create user
-        const user = new User(
-            users.length + 1,
+        const user = new User({
             name,
-            email.toLowerCase(),
-            hashedPassword,
-            role || "client"
-        );
+            email: email.toLowerCase(),
+            password: hashedPassword,
+            role: role || "client"
+        });
 
-        users.push(user);
+        // Save user to MongoDB
+        await user.save();
 
         return res.status(201).json({
             success: true,
             message: "User registered successfully",
             user: {
-                id: user.id,
+                id: user._id,
                 name: user.name,
                 email: user.email,
                 role: user.role
@@ -54,6 +53,8 @@ const register = async (req, res) => {
         });
 
     } catch (error) {
+        console.error("Registration error:", error);
+
         return res.status(500).json({
             success: false,
             message: "An unexpected error occurred"
@@ -61,6 +62,8 @@ const register = async (req, res) => {
     }
 };
 
+
+// Login
 const login = async (req, res) => {
     try {
         const { email, password } = req.body;
@@ -73,10 +76,10 @@ const login = async (req, res) => {
             });
         }
 
-        // Find user
-        const user = users.find(
-            user => user.email.toLowerCase() === email.toLowerCase()
-        );
+        // Find user in MongoDB
+        const user = await User.findOne({
+            email: email.toLowerCase()
+        });
 
         if (!user) {
             return res.status(401).json({
@@ -85,7 +88,7 @@ const login = async (req, res) => {
             });
         }
 
-        // Verify password
+        // Compare password with hashed password
         const passwordMatch = await bcrypt.compare(
             password,
             user.password
@@ -101,7 +104,7 @@ const login = async (req, res) => {
         // Create JWT
         const token = jwt.sign(
             {
-                id: user.id,
+                id: user._id,
                 role: user.role
             },
             process.env.JWT_SECRET,
@@ -115,7 +118,7 @@ const login = async (req, res) => {
             message: "Login successful",
             token,
             user: {
-                id: user.id,
+                id: user._id,
                 name: user.name,
                 email: user.email,
                 role: user.role
@@ -123,12 +126,15 @@ const login = async (req, res) => {
         });
 
     } catch (error) {
+        console.error("Login error:", error);
+
         return res.status(500).json({
             success: false,
             message: "An unexpected error occurred"
         });
     }
 };
+
 
 module.exports = {
     register,

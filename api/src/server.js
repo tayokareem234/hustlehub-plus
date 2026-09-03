@@ -2,6 +2,8 @@ require("dotenv").config();
 
 const express = require("express");
 
+const connectDB = require("./utils/db");
+
 const healthRoutes = require("./routes/health.routes");
 
 const authRoutes = require("./routes/auth.routes");
@@ -20,6 +22,8 @@ app.use("/api/auth", authRoutes);
 
 
 // Start the server
+connectDB();
+
 app.listen(PORT, () => {
     console.log(`HustleHub+ API running on http://localhost:${PORT}`);
 });
