@@ -8,6 +8,8 @@ const healthRoutes = require("./routes/health.routes");
 
 const authRoutes = require("./routes/auth.routes");
 
+const usersRoutes = require("./routes/users.routes");
+
 const app = express();
 
 const PORT = process.env.PORT || 3000;
@@ -19,6 +21,9 @@ app.use(express.json());
 app.use("/api/health", healthRoutes);
 
 app.use("/api/auth", authRoutes);
+
+app.use("/api/users", usersRoutes);
+
 
 
 // Start the server
