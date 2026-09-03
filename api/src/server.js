@@ -1,5 +1,7 @@
 const express = require("express");
 
+const healthRoutes = require("./routes/health.routes");
+
 const app = express();
 
 const PORT = 3000;
@@ -7,13 +9,8 @@ const PORT = 3000;
 // Middleware
 app.use(express.json());
 
-// Health check endpoint
-app.get("/api/health", (req, res) => {
-    res.status(200).json({
-        success: true,
-        message: "HustleHub+ API is running"
-    });
-});
+// Routes
+app.use("/api/health", healthRoutes);
 
 // Start the server
 app.listen(PORT, () => {
