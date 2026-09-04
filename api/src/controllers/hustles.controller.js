@@ -27,19 +27,12 @@ const createHustle = async (req, res) => {
             hustle
         });
 
-   } catch (error) {
-    if (error.name === "ValidationError") {
-        return res.status(400).json({
+    } catch (error) {
+        return res.status(500).json({
             success: false,
-            message: error.message
+            message: "An unexpected error occurred"
         });
     }
-
-    return res.status(500).json({
-        success: false,
-        message: "An unexpected error occurred"
-    });
-}
 };
 
 const getHustles = async (req, res) => {
@@ -115,7 +108,7 @@ const updateHustle = async (req, res) => {
         if (price !== undefined) hustle.price = price;
         if (location !== undefined) hustle.location = location;
 
-        await hustle.save();
+                await hustle.save();
 
         return res.status(200).json({
             success: true,
@@ -124,6 +117,14 @@ const updateHustle = async (req, res) => {
         });
 
     } catch (error) {
+
+        if (error.name === "ValidationError") {
+            return res.status(400).json({
+                success: false,
+                message: error.message
+            });
+        }
+
         return res.status(500).json({
             success: false,
             message: "An unexpected error occurred"
