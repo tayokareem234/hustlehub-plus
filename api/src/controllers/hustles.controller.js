@@ -27,12 +27,19 @@ const createHustle = async (req, res) => {
             hustle
         });
 
-    } catch (error) {
-        return res.status(500).json({
+   } catch (error) {
+    if (error.name === "ValidationError") {
+        return res.status(400).json({
             success: false,
-            message: "An unexpected error occurred"
+            message: error.message
         });
     }
+
+    return res.status(500).json({
+        success: false,
+        message: "An unexpected error occurred"
+    });
+}
 };
 
 const getHustles = async (req, res) => {
