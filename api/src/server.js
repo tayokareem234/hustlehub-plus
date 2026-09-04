@@ -10,6 +10,8 @@ const authRoutes = require("./routes/auth.routes");
 
 const usersRoutes = require("./routes/users.routes");
 
+const hustlesRoutes = require("./routes/hustles.routes");
+
 const app = express();
 
 const PORT = process.env.PORT || 3000;
@@ -23,6 +25,8 @@ app.use("/api/health", healthRoutes);
 app.use("/api/auth", authRoutes);
 
 app.use("/api/users", usersRoutes);
+
+app.use("/api/hustles", hustlesRoutes);
 
 
 
