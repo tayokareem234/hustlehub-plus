@@ -10,4 +10,6 @@ router.get("/", hustlesController.getHustles);
 
 router.get("/:id", hustlesController.getHustleById);
 
+router.put("/:id", authenticate, hustlesController.updateHustle);
+
 module.exports = router;
