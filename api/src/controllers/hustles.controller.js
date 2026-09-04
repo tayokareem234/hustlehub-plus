@@ -124,9 +124,48 @@ const updateHustle = async (req, res) => {
     }
 };
 
+const deleteHustle = async (req, res) => {
+    try {
+        console.log("DELETE ID:", req.params.id);
+        const hustle = await Hustle.findById(req.params.id);
+
+        if (!hustle) {
+            return res.status(404).json({
+                success: false,
+                message: "Hustle not found"
+            });
+        }
+
+        // Check ownership
+        if (hustle.createdBy.toString() !== req.user.id) {
+            return res.status(403).json({
+                success: false,
+                message: "You are not allowed to delete this hustle"
+            });
+        }
+
+        // Delete the hustle we already found
+        await hustle.deleteOne();
+
+        return res.status(200).json({
+            success: true,
+            message: "Hustle deleted successfully"
+        });
+
+    } catch (error) {
+        console.error("DELETE HUSTLE ERROR:", error);
+
+        return res.status(500).json({
+            success: false,
+            message: "An unexpected error occurred"
+        });
+    }
+};
+
 module.exports = {
     createHustle,
     getHustles,
     getHustleById,
-    updateHustle
+    updateHustle,
+    deleteHustle
 };

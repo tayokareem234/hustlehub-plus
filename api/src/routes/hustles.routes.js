@@ -12,4 +12,7 @@ router.get("/:id", hustlesController.getHustleById);
 
 router.put("/:id", authenticate, hustlesController.updateHustle);
 
+router.delete("/:id", authenticate, hustlesController.deleteHustle);
+
+
 module.exports = router;
