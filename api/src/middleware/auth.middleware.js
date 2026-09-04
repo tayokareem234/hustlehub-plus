@@ -11,14 +11,14 @@ const authenticate = (req, res, next) => {
             });
         }
 
-        const token = authHeader.split(" ")[1];
+const [scheme, token] = authHeader.split(" ");
 
-        if (!token) {
-            return res.status(401).json({
-                success: false,
-                message: "Authentication required"
-            });
-        }
+if (scheme !== "Bearer" || !token) {
+    return res.status(401).json({
+        success: false,
+        message: "Authentication required"
+    });
+}
 
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
