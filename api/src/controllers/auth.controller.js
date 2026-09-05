@@ -7,11 +7,47 @@ const register = async (req, res) => {
     try {
         const { name, email, password, role } = req.body;
 
-        // Check required fields
+        // Validate required fields
         if (!name || !email || !password) {
             return res.status(400).json({
                 success: false,
                 message: "Name, email and password are required"
+            });
+        }
+
+        // Validate name
+        if (typeof name !== "string" || name.trim().length < 2) {
+            return res.status(400).json({
+                success: false,
+                message: "Name must contain at least 2 characters"
+            });
+        }
+
+        // Validate email format
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+        if (typeof email !== "string" || !emailRegex.test(email)) {
+            return res.status(400).json({
+                success: false,
+                message: "Please provide a valid email address"
+            });
+        }
+
+        // Validate password length
+        if (typeof password !== "string" || password.length < 8) {
+            return res.status(400).json({
+                success: false,
+                message: "Password must be at least 8 characters long"
+            });
+        }
+
+        // Validate role if supplied
+        const allowedRoles = ["client", "freelancer", "admin"];
+
+        if (role !== undefined && !allowedRoles.includes(role)) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid user role"
             });
         }
 
@@ -32,7 +68,7 @@ const register = async (req, res) => {
 
         // Create user
         const user = new User({
-            name,
+            name: name.trim(),
             email: email.toLowerCase(),
             password: hashedPassword,
             role: role || "client"
@@ -68,11 +104,29 @@ const login = async (req, res) => {
     try {
         const { email, password } = req.body;
 
-        // Check required fields
+        // Validate required fields
         if (!email || !password) {
             return res.status(400).json({
                 success: false,
                 message: "Email and password are required"
+            });
+        }
+
+        // Validate email format
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+        if (typeof email !== "string" || !emailRegex.test(email)) {
+            return res.status(400).json({
+                success: false,
+                message: "Please provide a valid email address"
+            });
+        }
+
+        // Validate password
+        if (typeof password !== "string" || password.length < 8) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid email or password"
             });
         }
 

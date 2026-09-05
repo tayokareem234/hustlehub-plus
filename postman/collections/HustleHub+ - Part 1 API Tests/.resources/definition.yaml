@@ -6,3 +6,6 @@ variables:
   - key: json_web_token_0vm0
     secret: true
     disabled: false
+  - key: supabase_service_role_api_key_0vm0
+    secret: true
+    disabled: false
