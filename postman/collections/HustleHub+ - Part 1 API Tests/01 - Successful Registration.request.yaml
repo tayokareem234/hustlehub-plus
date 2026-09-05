@@ -1,0 +1,18 @@
+$kind: http-request
+description: ""
+url: https://localhost:3000/api/auth/register
+method: POST
+body:
+  type: json
+  content: "{\r
+
+    \  \"name\": \"Test User\",\r
+
+    \  \"email\": \"testuser1@hustlehub.com\",\r
+
+    \  \"password\": \"TestPassword123!\",\r
+
+    \  \"role\": \"client\"\r
+
+    }"
+order: 4467866238403269

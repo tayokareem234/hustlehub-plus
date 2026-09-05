@@ -1,0 +1,25 @@
+$kind: http-request
+name: 09 - Invalid Hustle - Negative Price
+description: ""
+url: https://localhost:3000/api/hustles
+method: POST
+body:
+  type: json
+  content: "{\r
+
+    \  \"title\": \"Invalid Test Service\",\r
+
+    \  \"description\": \"Testing invalid price validation\",\r
+
+    \  \"category\": \"Testing\",\r
+
+    \  \"price\": -100,\r
+
+    \  \"location\": \"Johannesburg\"\r
+
+    }"
+auth:
+  type: bearer
+  credentials:
+    token: "{{json_web_token_0j1z}}"
+order: 4500680916540360

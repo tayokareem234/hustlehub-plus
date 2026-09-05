@@ -1,0 +1,24 @@
+$kind: http-request
+description: ""
+url: https://localhost:3000/api/hustles
+method: POST
+body:
+  type: json
+  content: "{\r
+
+    \  \"title\": \"Test Graphic Design Service\",\r
+
+    \  \"description\": \"Professional graphic design service for clients\",\r
+
+    \  \"category\": \"Graphic Design\",\r
+
+    \  \"price\": 500,\r
+
+    \  \"location\": \"Johannesburg\"\r
+
+    }"
+auth:
+  type: bearer
+  credentials:
+    token: "{{json_web_token_0j1z}}"
+order: 4370796763307001

@@ -1,0 +1,16 @@
+$kind: http-request
+description: ""
+url: https://localhost:3000/api/auth/login
+method: POST
+body:
+  type: json
+  content: "{\r
+
+    \  \"email\": \"testuser1@hustlehub.com\",\r
+
+    \  \"password\": \"TestPassword123!\"\r
+
+    }"
+auth:
+  type: bearer
+order: 4293375156359681

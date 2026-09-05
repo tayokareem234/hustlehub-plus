@@ -1,0 +1,14 @@
+$kind: http-request
+description: ""
+url: https://localhost:3000/api/auth/register
+method: POST
+body:
+  type: json
+  content: "{\r
+
+    \  \"name\": \"Invalid User\",\r
+
+    \  \"email\": \"invaliduser@hustlehub.com\"\r
+
+    }"
+order: 1788599986489
