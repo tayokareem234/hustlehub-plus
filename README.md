@@ -514,3 +514,27 @@ The main security features included in the Part 1 backend are:
 
 These security controls provide the main secure backend foundation required for Part 1 of HustleHub+.
 
+The Postman collection contains both successful and invalid test scenarios to make sure that the API is working correctly and that the security controls are being enforced.
+
+### Successful Tests
+
+The successful tests include:
+
+* Successful user registration
+* Successful user login
+* Creating a hustle using a valid JWT
+* Accessing a protected route using a valid JWT
+
+### Invalid and Security Tests
+
+The invalid and security tests include:
+
+* Logging in with incorrect credentials
+* Registering a user with missing required fields
+* Accessing a protected route without a token
+* Accessing a protected route using an invalid token
+* Creating a hustle with a negative price
+
+These tests show that the API can process valid requests successfully while rejecting invalid or unauthorised requests with controlled HTTP responses.
+
+The Postman collection is included in the project repository under the `postman` directory.
