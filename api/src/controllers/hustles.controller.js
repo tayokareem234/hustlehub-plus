@@ -1,6 +1,7 @@
 const Hustle = require("../models/hustle.model");
 
 const createHustle = async (req, res) => {
+    
     try {
         const { title, description, category, price, location } = req.body;
 
@@ -27,12 +28,21 @@ const createHustle = async (req, res) => {
             hustle
         });
 
-    } catch (error) {
-        return res.status(500).json({
-            success: false,
-            message: "An unexpected error occurred"
-        });
-    }
+   } catch (error) {
+    console.error("CREATE HUSTLE ERROR:", error);
+
+  if (error.name === "ValidationError") {
+    return res.status(400).json({
+        success: false,
+        message: "Invalid hustle data"
+    });
+}
+
+    return res.status(500).json({
+        success: false,
+        message: "An unexpected error occurred"
+    });
+}
 };
 
 const getHustles = async (req, res) => {
