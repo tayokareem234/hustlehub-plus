@@ -91,6 +91,14 @@ const register = async (req, res) => {
     } catch (error) {
         console.error("Registration error:", error);
 
+        // Handle MongoDB duplicate email error
+        if (error.code === 11000) {
+            return res.status(409).json({
+                success: false,
+                message: "User with this email already exists"
+            });
+        }
+
         return res.status(500).json({
             success: false,
             message: "An unexpected error occurred"
