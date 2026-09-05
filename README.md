@@ -538,3 +538,25 @@ The invalid and security tests include:
 These tests show that the API can process valid requests successfully while rejecting invalid or unauthorised requests with controlled HTTP responses.
 
 The Postman collection is included in the project repository under the `postman` directory.
+
+### HTTPS Setup
+
+HustleHub+ is set up to run the backend API over **HTTPS** during local development. A locally generated self-signed SSL certificate is used for this.
+
+The SSL files are excluded from Git because the private key contains sensitive information and should not be committed to the repository.
+
+To generate the local certificate, first create the `api/ssl` directory and then generate the certificate and private key using OpenSSL:
+
+```powershell
+mkdir ssl
+openssl req -x509 -newkey rsa:2048 -nodes -keyout ssl/server.key -out ssl/server.crt -days 365 -subj "/CN=localhost"
+```
+
+This creates the following files inside the `ssl` directory:
+
+```text
+ssl/server.key
+ssl/server.crt
+```
+
+The `server.key` is the private key, while `server.crt` is the SSL certificate used by the local HTTPS server.
