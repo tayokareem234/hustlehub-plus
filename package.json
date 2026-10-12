@@ -1,0 +1,13 @@
+{
+  "name": "hustlehub-plus",
+  "version": "1.0.0",
+  "private": true,
+  "description": "HustleHub+ freelance marketplace - Part 2 API testing",
+  "scripts": {
+    "test:api": "newman run \"postman/collections/HustleHub+ - Part 2 API Tests/HustleHub-Part2.postman_collection.json\" --insecure",
+    "test:api:report": "newman run \"postman/collections/HustleHub+ - Part 2 API Tests/HustleHub-Part2.postman_collection.json\" --insecure --reporters cli,json --reporter-json-export reports/newman-report.json"
+  },
+  "devDependencies": {
+    "newman": "^6.2.3"
+  }
+}
