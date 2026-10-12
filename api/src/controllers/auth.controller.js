@@ -2,12 +2,15 @@ const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const User = require("../models/user.model");
 
-// Register
+// ============================================
+// REGISTER
+// ============================================
+
 const register = async (req, res) => {
     try {
         const { name, email, password, role } = req.body;
 
-        // Validate required fields
+        // Validate required fields.
         if (!name || !email || !password) {
             return res.status(400).json({
                 success: false,
@@ -15,45 +18,66 @@ const register = async (req, res) => {
             });
         }
 
-        // Validate name
-        if (typeof name !== "string" || name.trim().length < 2) {
+        // Validate name.
+        if (
+            typeof name !== "string" ||
+            name.trim().length < 2 ||
+            name.trim().length > 100
+        ) {
             return res.status(400).json({
                 success: false,
-                message: "Name must contain at least 2 characters"
+                message: "Name must contain between 2 and 100 characters"
             });
         }
 
-        // Validate email format
+        // Validate email format.
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-        if (typeof email !== "string" || !emailRegex.test(email)) {
+        if (
+            typeof email !== "string" ||
+            email.length > 254 ||
+            !emailRegex.test(email.trim())
+        ) {
             return res.status(400).json({
                 success: false,
                 message: "Please provide a valid email address"
             });
         }
 
-        // Validate password length
-        if (typeof password !== "string" || password.length < 8) {
+        // Validate password length.
+        if (
+            typeof password !== "string" ||
+            password.length < 8 ||
+            password.length > 128
+        ) {
             return res.status(400).json({
                 success: false,
-                message: "Password must be at least 8 characters long"
+                message: "Password must contain between 8 and 128 characters"
+            });
+        }
+        
+
+        // Public registration only permits clients and freelancers.
+        const allowedRoles = ["client", "freelancer"];
+        const requestedRole = role || "client";
+
+        if (
+            typeof requestedRole !== "string" ||
+            !allowedRoles.includes(requestedRole)
+        ) {
+            return res.status(400).json({
+                success: false,
+                message: "Role must be either client or freelancer"
             });
         }
 
-        // Validate role if supplied
-        const allowedRoles = ["client", "freelancer", "admin"];
+        // Normalise user input.
+        const normalisedEmail = email.trim().toLowerCase();
+        const normalisedName = name.trim();
 
-        if (role !== undefined && !allowedRoles.includes(role)) {
-            return res.status(400).json({
-                success: false,
-                message: "Invalid user role"
-            });
-        }
-
-        // Check if user already exists in MongoDB
+        // Check whether the account already exists.
         const existingUser = await User.findOne({
-            email: email.toLowerCase()
+            email: normalisedEmail
         });
 
         if (existingUser) {
@@ -63,25 +87,25 @@ const register = async (req, res) => {
             });
         }
 
-        // Hash password
+        // Hash the password before storing it.
         const hashedPassword = await bcrypt.hash(password, 10);
 
-        // Create user
+        // Create the account.
         const user = new User({
-            name: name.trim(),
-            email: email.toLowerCase(),
+            name: normalisedName,
+            email: normalisedEmail,
             password: hashedPassword,
-            role: role || "client"
+            role: requestedRole
         });
 
-        // Save user to MongoDB
         await user.save();
 
+        // Never return the password or password hash.
         return res.status(201).json({
             success: true,
             message: "User registered successfully",
             user: {
-                id: user._id,
+                id: user._id.toString(),
                 name: user.name,
                 email: user.email,
                 role: user.role
@@ -89,9 +113,9 @@ const register = async (req, res) => {
         });
 
     } catch (error) {
-        console.error("Registration error:", error);
+        console.error("Registration error:", error.message);
 
-        // Handle MongoDB duplicate email error
+        // Handle duplicate email errors.
         if (error.code === 11000) {
             return res.status(409).json({
                 success: false,
@@ -106,13 +130,15 @@ const register = async (req, res) => {
     }
 };
 
+// ============================================
+// LOGIN
+// ============================================
 
-// Login
 const login = async (req, res) => {
     try {
         const { email, password } = req.body;
 
-        // Validate required fields
+        // Validate required fields.
         if (!email || !password) {
             return res.status(400).json({
                 success: false,
@@ -120,27 +146,45 @@ const login = async (req, res) => {
             });
         }
 
-        // Validate email format
+        // Validate email format.
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-        if (typeof email !== "string" || !emailRegex.test(email)) {
+        if (
+            typeof email !== "string" ||
+            email.length > 254 ||
+            !emailRegex.test(email.trim())
+        ) {
             return res.status(400).json({
                 success: false,
                 message: "Please provide a valid email address"
             });
         }
 
-        // Validate password
-        if (typeof password !== "string" || password.length < 8) {
-            return res.status(400).json({
+        // Validate password input.
+        if (
+            typeof password !== "string" ||
+            password.length < 8 ||
+            password.length > 128
+        ) {
+            return res.status(401).json({
                 success: false,
                 message: "Invalid email or password"
             });
         }
 
-        // Find user in MongoDB
+        // Ensure JWT configuration exists before authenticating.
+        if (!process.env.JWT_SECRET) {
+            console.error("JWT_SECRET is not configured.");
+
+            return res.status(500).json({
+                success: false,
+                message: "Authentication service is not configured"
+            });
+        }
+
+        // Find the account.
         const user = await User.findOne({
-            email: email.toLowerCase()
+            email: email.trim().toLowerCase()
         });
 
         if (!user) {
@@ -150,7 +194,7 @@ const login = async (req, res) => {
             });
         }
 
-        // Compare password with hashed password
+        // Compare the submitted password with its stored hash.
         const passwordMatch = await bcrypt.compare(
             password,
             user.password
@@ -163,15 +207,16 @@ const login = async (req, res) => {
             });
         }
 
-        // Create JWT
+        // Create a JWT containing the authenticated user's ID and role.
         const token = jwt.sign(
             {
-                id: user._id,
+                id: user._id.toString(),
                 role: user.role
             },
             process.env.JWT_SECRET,
             {
-                expiresIn: "1h"
+                expiresIn: "1h",
+                algorithm: "HS256"
             }
         );
 
@@ -180,7 +225,7 @@ const login = async (req, res) => {
             message: "Login successful",
             token,
             user: {
-                id: user._id,
+                id: user._id.toString(),
                 name: user.name,
                 email: user.email,
                 role: user.role
@@ -188,7 +233,7 @@ const login = async (req, res) => {
         });
 
     } catch (error) {
-        console.error("Login error:", error);
+        console.error("Login error:", error.message);
 
         return res.status(500).json({
             success: false,
@@ -197,6 +242,9 @@ const login = async (req, res) => {
     }
 };
 
+// ============================================
+// EXPORT CONTROLLERS
+// ============================================
 
 module.exports = {
     register,
