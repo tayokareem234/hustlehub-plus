@@ -168,4 +168,13 @@ async function startServer() {
     }
 }
 
-startServer();
+// Start the HTTPS server only when this file is run directly.
+// This allows Jest and Supertest to import the Express app
+// without starting another server or database connection.
+
+if (require.main === module) {
+    startServer();
+}
+
+// Export the Express application for automated testing.
+module.exports = app;
