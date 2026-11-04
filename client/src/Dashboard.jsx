@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import api from "./api";
 import "./Dashboard.css";
 
@@ -17,6 +17,158 @@ const getId = (value) => {
 
   return String(value._id || value.id || "");
 };
+
+// ============================================
+// DEFAULT DASHBOARD DATA
+// ============================================
+
+const createEmptyDashboardData = () => ({
+  bookings: [],
+  transactions: [],
+  totalIncome: 0,
+
+  financialSummary: {
+    grossIncome: 0,
+    estimatedTax: 0,
+    netIncome: 0,
+    taxRate: 0.20,
+    currency: "ZAR",
+  },
+
+  monthlyIncome: [],
+  incomeTransactionCount: 0,
+  excludedFromIncomeCount: 0,
+});
+
+
+// ============================================
+// RETRIEVE DASHBOARD DATA FROM THE API
+// ============================================
+
+const fetchDashboardData = async (isClient, isFreelancer) => {
+
+  // Client dashboard
+  if (isClient) {
+    const response = await api.get("/bookings/client");
+
+    if (!response.data.success) {
+      throw new Error(
+        response.data.message ||
+          "Could not load your bookings."
+      );
+    }
+
+    return {
+      ...createEmptyDashboardData(),
+      bookings: response.data.bookings || [],
+    };
+  }
+
+
+  // Empty dashboard for other account types
+  if (!isFreelancer) {
+    return createEmptyDashboardData();
+  }
+
+
+  // Freelancer dashboard
+  const results = await Promise.allSettled([
+    api.get("/bookings/freelancer"),
+    api.get("/bookings/freelancer/income"),
+  ]);
+
+  const bookingsResult = results[0];
+  const incomeResult = results[1];
+
+  // If both requests fail, report an error.
+  if (
+    bookingsResult.status === "rejected" &&
+    incomeResult.status === "rejected"
+  ) {
+    throw new Error(
+      "We couldn't load your bookings or earnings. Please try again."
+    );
+  }
+
+  const dashboardData = createEmptyDashboardData();
+
+
+  // Process booking information.
+  if (bookingsResult.status === "fulfilled") {
+    dashboardData.bookings =
+      bookingsResult.value.data.bookings || [];
+  }
+
+
+  // Process financial information.
+  if (incomeResult.status === "fulfilled") {
+
+    const incomeData = incomeResult.value.data;
+    const summary = incomeData.financialSummary || {};
+
+    const grossIncome = Number(
+      summary.grossIncome ??
+        incomeData.totalIncome ??
+        0
+    );
+
+    const taxRate = Number(
+      summary.taxRate ??
+        incomeData.taxRate ??
+        0.20
+    );
+
+    const estimatedTax = Number(
+      summary.estimatedTax ??
+        incomeData.estimatedTax ??
+        grossIncome * taxRate
+    );
+
+    const netIncome = Number(
+      summary.netIncome ??
+        incomeData.netIncome ??
+        grossIncome - estimatedTax
+    );
+
+
+    dashboardData.transactions =
+      incomeData.transactions || [];
+
+    dashboardData.totalIncome = grossIncome;
+
+    dashboardData.financialSummary = {
+      grossIncome,
+      estimatedTax,
+      netIncome,
+      taxRate,
+      currency: summary.currency || "ZAR",
+    };
+
+    dashboardData.monthlyIncome =
+      Array.isArray(incomeData.monthlyIncome)
+        ? incomeData.monthlyIncome
+        : [];
+
+    dashboardData.incomeTransactionCount =
+      Number(incomeData.incomeTransactionCount || 0);
+
+    dashboardData.excludedFromIncomeCount =
+      Number(incomeData.excludedFromIncomeCount || 0);
+  }
+
+  return dashboardData;
+};
+
+
+// ============================================
+// DASHBOARD ERROR MESSAGE
+// ============================================
+
+const getDashboardErrorMessage = (err) =>
+  err.response?.data?.message ||
+  err.message ||
+  "Unable to load dashboard information.";
+
 
 function Dashboard({ user, services, onBackToMarketplace, onRefreshServices }) {
   const [activeSection, setActiveSection] = useState("Overview");
@@ -67,173 +219,117 @@ const [excludedFromIncomeCount, setExcludedFromIncomeCount] = useState(0);
   return ownerId !== "" && ownerId === userId;
 });
 
-const eligibleTransactions = transactions.filter(
-  (transaction) =>
-    transaction.booking &&
-    transaction.booking.status !== "cancelled"
-);
 
 
 
-  const loadDashboardData = async () => {
-    setLoading(true);
-    setError("");
+  // ============================================
+// APPLY RETRIEVED DASHBOARD DATA
+// ============================================
+
+const applyDashboardData = useCallback((data) => {
+
+  setBookings(data.bookings);
+  setTransactions(data.transactions);
+  setTotalIncome(data.totalIncome);
+
+  setFinancialSummary(data.financialSummary);
+  setMonthlyIncome(data.monthlyIncome);
+
+  setIncomeTransactionCount(
+    data.incomeTransactionCount
+  );
+
+  setExcludedFromIncomeCount(
+    data.excludedFromIncomeCount
+  );
+
+}, []);
+
+
+// ============================================
+// REFRESH DASHBOARD DATA
+// ============================================
+
+const loadDashboardData = async () => {
+
+  setLoading(true);
+  setError("");
+
+  try {
+
+    const dashboardData = await fetchDashboardData(
+      isClient,
+      isFreelancer
+    );
+
+    applyDashboardData(dashboardData);
+
+  } catch (err) {
+
+    console.error(
+      "Dashboard loading error:",
+      err
+    );
+
+    setError(getDashboardErrorMessage(err));
+
+  } finally {
+
+    setLoading(false);
+
+  }
+};
+
+// ============================================
+// INITIAL DASHBOARD DATA LOADING
+// ============================================
+
+useEffect(() => {
+
+  let isActive = true;
+
+  const loadInitialDashboardData = async () => {
 
     try {
-      if (isClient) {
-        const response = await api.get("/bookings/client");
 
-        if (!response.data.success) {
-          throw new Error(
-            response.data.message || "Could not load your bookings."
-          );
-        }
+      // Retrieve data asynchronously before updating React state.
+      const dashboardData = await fetchDashboardData(
+        isClient,
+        isFreelancer
+      );
 
-        setBookings(response.data.bookings || []);
-        setTransactions([]);
-        setTotalIncome(0);
-      } else if (isFreelancer) {
-        const results = await Promise.allSettled([
-          api.get("/bookings/freelancer"),
-          api.get("/bookings/freelancer/income"),
-        ]);
-
-        const bookingsResult = results[0];
-        const incomeResult = results[1];
-
-        if (bookingsResult.status === "fulfilled") {
-          setBookings(bookingsResult.value.data.bookings || []);
-        } else {
-          setBookings([]);
-        }
-
-       if (incomeResult.status === "fulfilled") {
-
-    const incomeData = incomeResult.value.data;
-
-    const summary = incomeData.financialSummary || {};
-
-    // Retrieve gross income.
-    const grossIncome = Number(
-        summary.grossIncome ??
-        incomeData.totalIncome ??
-        0
-    );
-
-    // Retrieve tax estimation rate.
-    const taxRate = Number(
-        summary.taxRate ??
-        incomeData.taxRate ??
-        0.20
-    );
-
-    // Retrieve estimated tax.
-    const estimatedTax = Number(
-        summary.estimatedTax ??
-        incomeData.estimatedTax ??
-        grossIncome * taxRate
-    );
-
-    // Retrieve net income.
-    const netIncome = Number(
-        summary.netIncome ??
-        incomeData.netIncome ??
-        grossIncome - estimatedTax
-    );
-
-    // Store transaction history.
-    setTransactions(
-        incomeData.transactions || []
-    );
-
-    // Preserve the existing overview income.
-    setTotalIncome(grossIncome);
-
-    // Store financial summary.
-    setFinancialSummary({
-        grossIncome,
-        estimatedTax,
-        netIncome,
-        taxRate,
-        currency: summary.currency || "ZAR"
-    });
-
-    // Store monthly income.
-    setMonthlyIncome(
-        Array.isArray(incomeData.monthlyIncome)
-            ? incomeData.monthlyIncome
-            : []
-    );
-
-    // Store eligible and excluded counts.
-    setIncomeTransactionCount(
-        Number(incomeData.incomeTransactionCount || 0)
-    );
-
-    setExcludedFromIncomeCount(
-        Number(incomeData.excludedFromIncomeCount || 0)
-    );
-
-} else {
-
-    setTransactions([]);
-    setTotalIncome(0);
-
-    setFinancialSummary({
-        grossIncome: 0,
-        estimatedTax: 0,
-        netIncome: 0,
-        taxRate: 0.20,
-        currency: "ZAR"
-    });
-
-    setMonthlyIncome([]);
-    setIncomeTransactionCount(0);
-    setExcludedFromIncomeCount(0);
-}
-
-        if (
-          bookingsResult.status === "rejected" &&
-          incomeResult.status === "rejected"
-        ) {
-          throw new Error(
-            "We couldn't load your bookings or earnings. Please try again."
-          );
-        }
-      } else {
-        setBookings([]);
-        setTransactions([]);
-        setTotalIncome(0);
-        setFinancialSummary({
-    grossIncome: 0,
-    estimatedTax: 0,
-    netIncome: 0,
-    taxRate: 0.20,
-    currency: "ZAR"
-});
-
-setMonthlyIncome([]);
-setIncomeTransactionCount(0);
-setExcludedFromIncomeCount(0);
+      if (isActive) {
+        applyDashboardData(dashboardData);
       }
 
-      
     } catch (err) {
-      console.error("Dashboard loading error:", err);
 
-      setError(
-        err.response?.data?.message ||
-          err.message ||
-          "Unable to load dashboard information."
+      console.error(
+        "Dashboard loading error:",
+        err
       );
+
+      if (isActive) {
+        setError(getDashboardErrorMessage(err));
+      }
+
     } finally {
-      setLoading(false);
+
+      if (isActive) {
+        setLoading(false);
+      }
+
     }
   };
 
-  useEffect(() => {
-    loadDashboardData();
-  }, [userId, role]);
+  loadInitialDashboardData();
+
+  // Prevent updates after the component is unmounted.
+  return () => {
+    isActive = false;
+  };
+
+}, [userId, role, isClient, isFreelancer, applyDashboardData]);
 
   const openCreateService = () => {
     setEditingService(null);
@@ -350,45 +446,7 @@ setExcludedFromIncomeCount(0);
     }
   };
 
-  const handleBookService = async (service) => {
-    if (!isClient) {
-      setNotice(
-        "Only client accounts can book services. Log in with a client account to continue."
-      );
-      return;
-    }
 
-    const confirmed = window.confirm(
-      `Book "${service.title}" for ${money(service.price)}?`
-    );
-
-    if (!confirmed) return;
-
-    setNotice("");
-    setError("");
-
-    try {
-      const response = await api.post("/bookings", {
-        hustleId: service.id,
-      });
-
-      setNotice(
-        response.data.message ||
-          "Your booking was created successfully."
-      );
-
-      setActiveSection("Bookings");
-
-      await loadDashboardData();
-    } catch (err) {
-      console.error("Booking creation error:", err);
-
-      setError(
-        err.response?.data?.message ||
-          "Unable to create this booking."
-      );
-    }
-  };
 
   const handleCancelBooking = async (booking) => {
     const confirmed = window.confirm(

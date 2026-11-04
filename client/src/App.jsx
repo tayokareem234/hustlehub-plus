@@ -4,6 +4,59 @@ import Dashboard from "./Dashboard";
 import AdminDashboard from "./AdminDashboard";
 import "./App.css";
 
+const CURRENT_YEAR = new Date().getFullYear();
+
+// ============================================
+// MARKETPLACE DATA HELPER
+// ============================================
+
+const requestMarketplaceServices = async () => {
+  const response = await api.get("/hustles");
+
+  if (!response.data.success) {
+    throw new Error(
+      response.data.message ||
+        "Unable to retrieve marketplace services."
+    );
+  }
+
+  const hustles = response.data.hustles || [];
+
+  return hustles.map((hustle) => ({
+    id: hustle._id,
+    title: hustle.title,
+    category: hustle.category,
+    description: hustle.description,
+    price: hustle.price,
+    location: hustle.location,
+
+    freelancer:
+      typeof hustle.createdBy === "object" &&
+      hustle.createdBy !== null
+        ? {
+            id: String(
+              hustle.createdBy._id ||
+                hustle.createdBy.id ||
+                ""
+            ),
+            name: hustle.createdBy.name || "",
+            email: hustle.createdBy.email || "",
+          }
+        : {
+            id: String(hustle.createdBy || ""),
+            name: "",
+            email: "",
+          },
+
+    initials: hustle.title
+      .split(/\s+/)
+      .filter(Boolean)
+      .map((word) => word[0])
+      .join("")
+      .slice(0, 2)
+      .toUpperCase(),
+  }));
+};
 
 const categories = [
   "All",
@@ -45,66 +98,72 @@ function App() {
   const [authSubmitting, setAuthSubmitting] = useState(false);
   const [showDashboard, setShowDashboard] = useState(false);
 
-  // Load marketplace services from MongoDB
-  const fetchHustles = async () => {
-    try {
-      setLoading(true);
-      setError("");
+// ============================================
+// MANUAL MARKETPLACE REFRESH
+// ============================================
 
-      const response = await api.get("/hustles");
+const refreshHustles = async () => {
+  setLoading(true);
+  setError("");
 
-      if (!response.data.success) {
-        throw new Error("Unable to retrieve marketplace services.");
-      }
+  try {
+    const formattedServices =
+      await requestMarketplaceServices();
 
-      const hustles = response.data.hustles || [];
+    setServices(formattedServices);
 
- const formattedServices = hustles.map((hustle) => ({
-  id: hustle._id,
-  title: hustle.title,
-  category: hustle.category,
-  description: hustle.description,
-  price: hustle.price,
-  location: hustle.location,
+  } catch (err) {
+    console.error(
+      "Failed to load marketplace services:",
+      err
+    );
 
-  // Keep the freelancer's ID and display information consistent.
-  freelancer:
-    typeof hustle.createdBy === "object" && hustle.createdBy !== null
-      ? {
-          id: String(hustle.createdBy._id || hustle.createdBy.id || ""),
-          name: hustle.createdBy.name || "",
-          email: hustle.createdBy.email || "",
-        }
-      : {
-          id: String(hustle.createdBy || ""),
-          name: "",
-          email: "",
-        },
+    setError(
+      "We couldn't load the marketplace services. Please try again."
+    );
 
-  initials: hustle.title
-    .split(/\s+/)
-    .filter(Boolean)
-    .map((word) => word[0])
-    .join("")
-    .slice(0, 2)
-    .toUpperCase(),
-}));
+  } finally {
+    setLoading(false);
+  }
+};
+
+
+// ============================================
+// INITIAL MARKETPLACE LOADING
+// ============================================
+
+useEffect(() => {
+  let isActive = true;
+
+  requestMarketplaceServices()
+    .then((formattedServices) => {
+      if (!isActive) return;
 
       setServices(formattedServices);
-    } catch (err) {
-      console.error("Failed to load marketplace services:", err);
-
-      setError(
-        "We couldn't load the marketplace services. Please try again."
+      setError("");
+    })
+    .catch((err) => {
+      console.error(
+        "Failed to load marketplace services:",
+        err
       );
-    } finally {
-      setLoading(false);
-    }
-  };
 
-  useEffect(() => {
-    fetchHustles();
-  }, []);
+      if (isActive) {
+        setError(
+          "We couldn't load the marketplace services. Please try again."
+        );
+      }
+    })
+    .finally(() => {
+      if (isActive) {
+        setLoading(false);
+      }
+    });
+
+  return () => {
+    isActive = false;
+  };
+}, []);
 
   // Restore an existing login when the page is refreshed
   useEffect(() => {
@@ -310,7 +369,7 @@ function App() {
       user={user}
       services={services}
       onBackToMarketplace={() => setShowDashboard(false)}
-      onRefreshServices={fetchHustles}
+      onRefreshServices={refreshHustles}
     />
   )
 ): (
@@ -503,7 +562,7 @@ function App() {
               <button
                 type="button"
                 className="button button-primary"
-                onClick={fetchHustles}
+                onClick={refreshHustles}
               >
                 Try again
               </button>
@@ -619,15 +678,8 @@ function App() {
     "Booking created successfully."
 );
 
-setShowDashboard(false);
-
-// Open the dashboard after returning to the marketplace state.
-// The dashboard will load the latest bookings when mounted.
-setTimeout(() => {
-  setShowDashboard(true);
-}, 0);
-
-                          setShowDashboard(true);
+// Open the dashboard to display the latest bookings.
+setShowDashboard(true);
                         } catch (err) {
                           window.alert(
                             err.response?.data?.message ||
@@ -687,7 +739,7 @@ setTimeout(() => {
 
         <p>Built for people who make things happen.</p>
 
-        <span>© {new Date().getFullYear()} HustleHub+</span>
+        <span>© {CURRENT_YEAR} HustleHub+</span>
       </footer>
 
       {/* Authentication modal */}

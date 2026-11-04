@@ -1,44 +1,109 @@
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import api from "./api";
+
+// ============================================
+// FETCH REGISTERED USERS
+// ============================================
+
+const getRegisteredUsers = async () => {
+  const response = await api.get("/admin/users");
+
+  if (!response.data.success) {
+    throw new Error(
+      response.data.message || "Unable to retrieve users."
+    );
+  }
+
+  return response.data.users || [];
+};
+
+
+// ============================================
+// ADMIN DASHBOARD
+// ============================================
 
 function AdminDashboard({ user, onBackToMarketplace, onLogout }) {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  const loadUsers = useCallback(async () => {
+
+  // ==========================================
+  // INITIAL USER LOADING
+  // ==========================================
+
+  useEffect(() => {
+    let isActive = true;
+
+    const fetchInitialUsers = async () => {
+      try {
+        const registeredUsers = await getRegisteredUsers();
+
+        if (isActive) {
+          setUsers(registeredUsers);
+          setError("");
+        }
+      } catch (err) {
+        if (isActive) {
+          setError(
+            err.response?.data?.message ||
+              err.message ||
+              "Unable to load registered users. Please try again."
+          );
+        }
+      } finally {
+        if (isActive) {
+          setLoading(false);
+        }
+      }
+    };
+
+    fetchInitialUsers();
+
+    return () => {
+      isActive = false;
+    };
+  }, []);
+
+
+  // ==========================================
+  // REFRESH USERS
+  // ==========================================
+
+  const loadUsers = async () => {
     setLoading(true);
     setError("");
 
     try {
-      const response = await api.get("/admin/users");
+      const registeredUsers = await getRegisteredUsers();
 
-      if (!response.data.success) {
-        throw new Error(
-          response.data.message || "Unable to retrieve users."
-        );
-      }
-
-      setUsers(response.data.users || []);
+      setUsers(registeredUsers);
     } catch (err) {
       setError(
         err.response?.data?.message ||
+          err.message ||
           "Unable to load registered users. Please try again."
       );
     } finally {
       setLoading(false);
     }
-  }, []);
+  };
 
-  useEffect(() => {
-    loadUsers();
-  }, [loadUsers]);
+
+  // ==========================================
+  // USER STATISTICS
+  // ==========================================
 
   const countByRole = (role) =>
     users.filter(
       (account) =>
         String(account.role || "").toLowerCase() === role
     ).length;
+
+
+  // ==========================================
+  // DASHBOARD INTERFACE
+  // ==========================================
 
   return (
     <main
@@ -51,6 +116,9 @@ function AdminDashboard({ user, onBackToMarketplace, onLogout }) {
       }}
     >
       <div style={{ maxWidth: "1150px", margin: "0 auto" }}>
+
+        {/* Dashboard Header */}
+
         <header
           style={{
             display: "flex",
@@ -102,6 +170,9 @@ function AdminDashboard({ user, onBackToMarketplace, onLogout }) {
           </div>
         </header>
 
+
+        {/* User Statistics */}
+
         <section
           style={{
             display: "grid",
@@ -128,6 +199,9 @@ function AdminDashboard({ user, onBackToMarketplace, onLogout }) {
             </article>
           ))}
         </section>
+
+
+        {/* Registered Users */}
 
         <section style={cardStyle}>
           <div
@@ -160,9 +234,17 @@ function AdminDashboard({ user, onBackToMarketplace, onLogout }) {
             </button>
           </div>
 
+
+          {/* Loading State */}
+
           {loading && (
-            <p role="status">Loading registered users...</p>
+            <p role="status">
+              Loading registered users...
+            </p>
           )}
+
+
+          {/* Error State */}
 
           {error && (
             <div
@@ -179,9 +261,15 @@ function AdminDashboard({ user, onBackToMarketplace, onLogout }) {
             </div>
           )}
 
+
+          {/* Empty State */}
+
           {!loading && !error && users.length === 0 && (
             <p>No registered users were found.</p>
           )}
+
+
+          {/* User Table */}
 
           {!loading && !error && users.length > 0 && (
             <div style={{ overflowX: "auto" }}>
@@ -195,21 +283,30 @@ function AdminDashboard({ user, onBackToMarketplace, onLogout }) {
               >
                 <thead>
                   <tr>
-                    {["Name", "Email", "Role", "Date registered"].map(
-                      (heading) => (
-                        <th key={heading} style={cellStyle}>
-                          {heading}
-                        </th>
-                      )
-                    )}
+                    {[
+                      "Name",
+                      "Email",
+                      "Role",
+                      "Date registered",
+                    ].map((heading) => (
+                      <th key={heading} style={cellStyle}>
+                        {heading}
+                      </th>
+                    ))}
                   </tr>
                 </thead>
 
                 <tbody>
                   {users.map((account) => (
                     <tr key={account._id}>
-                      <td style={cellStyle}>{account.name}</td>
-                      <td style={cellStyle}>{account.email}</td>
+                      <td style={cellStyle}>
+                        {account.name}
+                      </td>
+
+                      <td style={cellStyle}>
+                        {account.email}
+                      </td>
+
                       <td style={cellStyle}>
                         <span
                           style={{
@@ -223,6 +320,7 @@ function AdminDashboard({ user, onBackToMarketplace, onLogout }) {
                           {account.role}
                         </span>
                       </td>
+
                       <td style={cellStyle}>
                         {account.createdAt
                           ? new Date(
@@ -236,6 +334,9 @@ function AdminDashboard({ user, onBackToMarketplace, onLogout }) {
               </table>
             </div>
           )}
+
+
+          {/* Privacy Notice */}
 
           <p
             style={{
@@ -252,6 +353,11 @@ function AdminDashboard({ user, onBackToMarketplace, onLogout }) {
     </main>
   );
 }
+
+
+// ============================================
+// SHARED STYLES
+// ============================================
 
 const buttonStyle = {
   padding: "10px 14px",
@@ -273,5 +379,6 @@ const cellStyle = {
   padding: "13px 12px",
   borderBottom: "1px solid #e8ebf1",
 };
+
 
 export default AdminDashboard;
