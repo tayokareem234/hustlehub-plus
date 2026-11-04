@@ -1,8 +1,8 @@
-
 require("dotenv").config();
 
 const express = require("express");
 const https = require("https");
+const http = require("http");
 const fs = require("fs");
 const path = require("path");
 const helmet = require("helmet");
@@ -20,11 +20,6 @@ const adminRoutes = require("./routes/admin.routes");
 const app = express();
 
 const PORT = process.env.PORT || 3000;
-
-// ============================================
-// HTTPS CONFIGURATION
-// ============================================
-
 
 // ============================================
 // SECURITY HEADERS
@@ -89,10 +84,7 @@ app.use("/api/hustles", hustlesRoutes);
 
 app.use("/api/admin", adminRoutes);
 
-// Apply booking rate limiting to booking creation.
-
 app.use("/api/bookings", bookingsRoutes);
-
 
 // ============================================
 // NOT FOUND HANDLER
@@ -116,7 +108,11 @@ app.use((err, req, res, next) => {
         return next(err);
     }
 
-    if (err instanceof SyntaxError && err.status === 400 && "body" in err) {
+    if (
+        err instanceof SyntaxError &&
+        err.status === 400 &&
+        "body" in err
+    ) {
         return res.status(400).json({
             success: false,
             message: "Invalid JSON request body"
@@ -135,24 +131,47 @@ app.use((err, req, res, next) => {
 
 async function startServer() {
     try {
+        // Connect to MongoDB before starting the API.
         await connectDB();
 
-        // Load SSL certificates only when starting the actual server.
-        // Automated tests can import the Express app without local certificates.
-        const sslOptions = {
-            key: fs.readFileSync(
-                path.join(__dirname, "..", "ssl", "server.key")
-            ),
-            cert: fs.readFileSync(
-                path.join(__dirname, "..", "ssl", "server.crt")
-            )
-        };
+        // Local development uses HTTPS.
+        // Docker uses HTTP internally.
+        const useHttps = process.env.HTTPS_ENABLED !== "false";
 
-        https.createServer(sslOptions, app).listen(PORT, () => {
+        let server;
+        let protocol;
+
+        if (useHttps) {
+            const sslOptions = {
+                key: fs.readFileSync(
+                    path.join(__dirname, "..", "ssl", "server.key")
+                ),
+                cert: fs.readFileSync(
+                    path.join(__dirname, "..", "ssl", "server.crt")
+                )
+            };
+
+            server = https.createServer(sslOptions, app);
+            protocol = "https";
+        } else {
+            server = http.createServer(app);
+            protocol = "http";
+        }
+
+        // Handle server startup errors.
+        server.on("error", (error) => {
+            console.error("HustleHub+ server error:", error.message);
+            process.exit(1);
+        });
+
+        // Start the API exactly once.
+        server.listen(PORT, "0.0.0.0", () => {
             console.log(
-                `HustleHub+ API running on https://localhost:${PORT}`
+                `HustleHub+ API running on ${protocol}://0.0.0.0:${PORT}`
             );
         });
+
+        return server;
 
     } catch (error) {
         console.error(
@@ -164,13 +183,21 @@ async function startServer() {
     }
 }
 
-// Start the HTTPS server only when this file is run directly.
-// This allows Jest and Supertest to import the Express app
-// without starting another server or database connection.
+// ============================================
+// EXPORT EXPRESS APPLICATION
+// ============================================
+
+// Jest and Supertest can import the app without
+// starting another server or database connection.
+
+module.exports = app;
+
+// ============================================
+// START SERVER ONLY WHEN RUN DIRECTLY
+// ============================================
+
+// This block must only appear ONCE in this file.
 
 if (require.main === module) {
     startServer();
 }
-
-// Export the Express application for automated testing.
-module.exports = app;
