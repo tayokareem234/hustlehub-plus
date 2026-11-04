@@ -25,14 +25,6 @@ const PORT = process.env.PORT || 3000;
 // HTTPS CONFIGURATION
 // ============================================
 
-const sslOptions = {
-    key: fs.readFileSync(
-        path.join(__dirname, "..", "ssl", "server.key")
-    ),
-    cert: fs.readFileSync(
-        path.join(__dirname, "..", "ssl", "server.crt")
-    )
-};
 
 // ============================================
 // SECURITY HEADERS
@@ -76,18 +68,6 @@ const authLimiter = rateLimit({
     message: {
         success: false,
         message: "Too many authentication requests. Please try again later."
-    }
-});
-
-// Protect booking creation from excessive requests.
-const bookingLimiter = rateLimit({
-    windowMs: 15 * 60 * 1000,
-    limit: 20,
-    standardHeaders: "draft-8",
-    legacyHeaders: false,
-    message: {
-        success: false,
-        message: "Too many booking requests. Please try again later."
     }
 });
 
@@ -157,13 +137,29 @@ async function startServer() {
     try {
         await connectDB();
 
+        // Load SSL certificates only when starting the actual server.
+        // Automated tests can import the Express app without local certificates.
+        const sslOptions = {
+            key: fs.readFileSync(
+                path.join(__dirname, "..", "ssl", "server.key")
+            ),
+            cert: fs.readFileSync(
+                path.join(__dirname, "..", "ssl", "server.crt")
+            )
+        };
+
         https.createServer(sslOptions, app).listen(PORT, () => {
             console.log(
                 `HustleHub+ API running on https://localhost:${PORT}`
             );
         });
+
     } catch (error) {
-        console.error("Failed to start HustleHub+ API:", error.message);
+        console.error(
+            "Failed to start HustleHub+ API:",
+            error.message
+        );
+
         process.exit(1);
     }
 }

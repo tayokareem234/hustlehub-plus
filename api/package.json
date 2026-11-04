@@ -6,10 +6,12 @@
   "directories": {
     "test": "tests"
   },
- "scripts": {
+"scripts": {
     "start": "node src/server.js",
     "dev": "node src/server.js",
-    "test": "jest --runInBand"
+    "test": "jest --runInBand",
+    "lint": "oxlint src tests",
+    "build": "node --check src/server.js"
 },
   "keywords": [
     "hustlehub",
@@ -32,6 +34,7 @@
   },
   "devDependencies": {
     "jest": "^30.5.2",
+    "oxlint": "^1.90.0",
     "supertest": "^7.3.1"
   }
 }

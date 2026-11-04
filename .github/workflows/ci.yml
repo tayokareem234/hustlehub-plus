@@ -1,0 +1,96 @@
+name: HustleHub+ CI Pipeline
+
+on:
+  push:
+    branches:
+      - master
+
+  pull_request:
+    branches:
+      - master
+
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+
+  # ==========================================
+  # BACKEND CI
+  # ==========================================
+
+  backend:
+    name: Backend Tests, Lint and Build
+
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: api
+
+    env:
+      JWT_SECRET: ci-only-test-secret-not-for-production
+      NODE_ENV: test
+
+    steps:
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: api/package-lock.json
+
+      - name: Install backend dependencies
+        run: npm ci
+
+      - name: Run backend automated tests
+        run: npm test
+
+      - name: Run backend static analysis
+        run: npm run lint
+
+      - name: Validate backend build
+        run: npm run build
+
+
+  # ==========================================
+  # FRONTEND CI
+  # ==========================================
+
+  frontend:
+    name: Frontend Tests, Lint and Build
+
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: client
+
+    steps:
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: client/package-lock.json
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Run frontend automated tests
+        run: npm run test:run
+
+      - name: Run frontend static analysis
+        run: npm run lint
+
+      - name: Build frontend application
+        run: npm run build
