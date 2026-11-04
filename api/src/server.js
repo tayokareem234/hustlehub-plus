@@ -7,6 +7,8 @@ const fs = require("fs");
 const path = require("path");
 const helmet = require("helmet");
 const rateLimit = require("express-rate-limit");
+const logger = require("./utils/logger");
+const requestLogger = require("./middleware/request-logger.middleware");
 
 const connectDB = require("./utils/db");
 
@@ -39,6 +41,12 @@ app.use(
         }
     })
 );
+
+// ============================================
+// STRUCTURED REQUEST LOGGING
+// ============================================
+
+app.use(requestLogger);
 
 // ============================================
 // REQUEST BODY PARSING
@@ -102,7 +110,11 @@ app.use((req, res) => {
 // ============================================
 
 app.use((err, req, res, next) => {
-    console.error("API ERROR:", err.message);
+    logger.error("api.unhandled_error", {
+    requestId: req.requestId,
+    errorName: err.name,
+    errorMessage: err.message
+});
 
     if (res.headersSent) {
         return next(err);
@@ -166,18 +178,19 @@ async function startServer() {
 
         // Start the API exactly once.
         server.listen(PORT, "0.0.0.0", () => {
-            console.log(
-                `HustleHub+ API running on ${protocol}://0.0.0.0:${PORT}`
-            );
+           logger.info("server.started", {
+    protocol,
+    host: "0.0.0.0",
+    port: Number(PORT)
+});
         });
 
         return server;
 
     } catch (error) {
-        console.error(
-            "Failed to start HustleHub+ API:",
-            error.message
-        );
+       logger.error("server.start_failed", {
+    errorMessage: error.message
+});
 
         process.exit(1);
     }

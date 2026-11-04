@@ -2,6 +2,7 @@ const Booking = require("../models/booking.model");
 const Hustle = require("../models/hustle.model");
 const Transaction = require("../models/transaction.model");
 
+const logger = require("../utils/logger");
 
 // ============================================
 // CREATE BOOKING
@@ -74,12 +75,40 @@ const createBooking = async (req, res) => {
             });
 
         } catch (transactionError) {
+
+            logger.error("transaction.creation_failed", {
+                requestId: req.requestId,
+                bookingId: booking._id.toString(),
+                userId: req.user.id,
+                errorMessage: transactionError.message
+            });
+
             // Roll back the booking if its transaction
             // cannot be created.
             await Booking.findByIdAndDelete(booking._id);
 
             throw transactionError;
         }
+
+        // Record successful booking creation.
+        logger.info("booking.created", {
+            requestId: req.requestId,
+            bookingId: booking._id.toString(),
+            hustleId: hustle._id.toString(),
+            clientId: req.user.id,
+            freelancerId: hustle.createdBy.toString(),
+            status: booking.status
+        });
+
+        // Record simulated transaction creation.
+        logger.info("transaction.simulated", {
+            requestId: req.requestId,
+            transactionId: transaction._id.toString(),
+            bookingId: booking._id.toString(),
+            amount: transaction.amount,
+            status: transaction.status,
+            currency: "ZAR"
+        });
 
         return res.status(201).json({
             success: true,
@@ -89,7 +118,12 @@ const createBooking = async (req, res) => {
         });
 
     } catch (error) {
-        console.error("CREATE BOOKING ERROR:", error.message);
+
+        logger.error("booking.creation_failed", {
+            requestId: req.requestId,
+            userId: req.user?.id,
+            errorMessage: error.message
+        });
 
         return res.status(500).json({
             success: false,
@@ -97,7 +131,6 @@ const createBooking = async (req, res) => {
         });
     }
 };
-
 
 // ============================================
 // GET CLIENT BOOKINGS
@@ -122,7 +155,12 @@ const getClientBookings = async (req, res) => {
         });
 
     } catch (error) {
-        console.error("GET CLIENT BOOKINGS ERROR:", error.message);
+
+        logger.error("booking.client_retrieval_failed", {
+            requestId: req.requestId,
+            userId: req.user?.id,
+            errorMessage: error.message
+        });
 
         return res.status(500).json({
             success: false,
@@ -130,7 +168,6 @@ const getClientBookings = async (req, res) => {
         });
     }
 };
-
 
 // ============================================
 // GET FREELANCER BOOKINGS
@@ -157,10 +194,12 @@ const getFreelancerBookings = async (req, res) => {
         });
 
     } catch (error) {
-        console.error(
-            "GET FREELANCER BOOKINGS ERROR:",
-            error.message
-        );
+
+        logger.error("booking.freelancer_retrieval_failed", {
+            requestId: req.requestId,
+            userId: req.user?.id,
+            errorMessage: error.message
+        });
 
         return res.status(500).json({
             success: false,
@@ -168,7 +207,6 @@ const getFreelancerBookings = async (req, res) => {
         });
     }
 };
-
 
 // ============================================
 // FINANCIAL CALCULATION HELPERS
@@ -181,9 +219,7 @@ const roundMoney = (amount) => {
     ) / 100;
 };
 
-
 // Retrieve the configurable tax estimation rate.
-//
 // Default: 20% (academic estimation assumption).
 // TAX_ESTIMATE_RATE=0.20 in the environment file.
 
@@ -210,7 +246,6 @@ const getTaxEstimateRate = () => {
     return rate;
 };
 
-
 // ============================================
 // GET FREELANCER INCOME AND TAX ESTIMATE
 // ============================================
@@ -228,7 +263,6 @@ const getFreelancerIncome = async (req, res) => {
             .populate("client", "name")
             .sort({ createdAt: -1 });
 
-
         // ============================================
         // FILTER ELIGIBLE TRANSACTIONS
         // ============================================
@@ -240,7 +274,6 @@ const getFreelancerIncome = async (req, res) => {
                 transaction.booking &&
                 transaction.booking.status !== "cancelled"
         );
-
 
         // ============================================
         // CALCULATE GROSS INCOME
@@ -259,7 +292,6 @@ const getFreelancerIncome = async (req, res) => {
 
         const totalIncome = totalIncomeCents / 100;
 
-
         // ============================================
         // CALCULATE ESTIMATED TAX
         // ============================================
@@ -272,7 +304,6 @@ const getFreelancerIncome = async (req, res) => {
 
         const estimatedTax = estimatedTaxCents / 100;
 
-
         // ============================================
         // CALCULATE NET INCOME
         // ============================================
@@ -281,7 +312,6 @@ const getFreelancerIncome = async (req, res) => {
             totalIncomeCents - estimatedTaxCents;
 
         const netIncome = netIncomeCents / 100;
-
 
         // ============================================
         // MONTHLY INCOME SUMMARY
@@ -306,7 +336,6 @@ const getFreelancerIncome = async (req, res) => {
 
             monthlyTotals.set(key, 0);
         }
-
 
         // Add eligible transaction amounts to their months.
         eligibleTransactions.forEach((transaction) => {
@@ -335,7 +364,6 @@ const getFreelancerIncome = async (req, res) => {
             }
         });
 
-
         // Prepare monthly figures for the frontend.
         const monthlyIncome = Array.from(
             monthlyTotals.entries()
@@ -357,7 +385,6 @@ const getFreelancerIncome = async (req, res) => {
             };
         });
 
-
         // ============================================
         // RETURN FINANCIAL SUMMARY
         // ============================================
@@ -376,15 +403,10 @@ const getFreelancerIncome = async (req, res) => {
                 currency: "ZAR"
             },
 
-            // Keep the original totalIncome property
-            // to maintain compatibility with the
-            // existing frontend.
+            // Keep the original properties for frontend compatibility.
             totalIncome: roundMoney(totalIncome),
-
             estimatedTax: roundMoney(estimatedTax),
-
             netIncome: roundMoney(netIncome),
-
             taxRate,
 
             // Historical transaction records.
@@ -406,10 +428,12 @@ const getFreelancerIncome = async (req, res) => {
         });
 
     } catch (error) {
-        console.error(
-            "GET FREELANCER INCOME ERROR:",
-            error.message
-        );
+
+        logger.error("financial.income_retrieval_failed", {
+            requestId: req.requestId,
+            userId: req.user?.id,
+            errorMessage: error.message
+        });
 
         return res.status(500).json({
             success: false,
@@ -417,7 +441,6 @@ const getFreelancerIncome = async (req, res) => {
         });
     }
 };
-
 
 // ============================================
 // CANCEL BOOKING
@@ -459,6 +482,14 @@ const cancelBooking = async (req, res) => {
 
         await booking.save();
 
+        // Record successful cancellation.
+        logger.info("booking.cancelled", {
+            requestId: req.requestId,
+            bookingId: booking._id.toString(),
+            clientId: req.user.id,
+            status: booking.status
+        });
+
         return res.status(200).json({
             success: true,
             message: "Booking cancelled successfully",
@@ -466,7 +497,13 @@ const cancelBooking = async (req, res) => {
         });
 
     } catch (error) {
-        console.error("CANCEL BOOKING ERROR:", error.message);
+
+        logger.error("booking.cancellation_failed", {
+            requestId: req.requestId,
+            userId: req.user?.id,
+            bookingId: req.params.id,
+            errorMessage: error.message
+        });
 
         return res.status(500).json({
             success: false,
@@ -474,7 +511,6 @@ const cancelBooking = async (req, res) => {
         });
     }
 };
-
 
 // ============================================
 // EXPORT CONTROLLERS

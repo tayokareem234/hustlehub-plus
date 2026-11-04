@@ -1,6 +1,8 @@
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
+
 const User = require("../models/user.model");
+const logger = require("../utils/logger");
 
 // ============================================
 // REGISTER
@@ -8,7 +10,7 @@ const User = require("../models/user.model");
 
 const register = async (req, res) => {
     try {
-        const { name, email, password, role } = req.body;
+        const { name, email, password, role } = req.body || {};
 
         // Validate required fields.
         if (!name || !email || !password) {
@@ -55,7 +57,6 @@ const register = async (req, res) => {
                 message: "Password must contain between 8 and 128 characters"
             });
         }
-        
 
         // Public registration only permits clients and freelancers.
         const allowedRoles = ["client", "freelancer"];
@@ -81,6 +82,11 @@ const register = async (req, res) => {
         });
 
         if (existingUser) {
+            logger.warn("auth.registration_rejected", {
+                requestId: req.requestId,
+                reason: "account_already_exists"
+            });
+
             return res.status(409).json({
                 success: false,
                 message: "User with this email already exists"
@@ -100,6 +106,13 @@ const register = async (req, res) => {
 
         await user.save();
 
+        // Record successful registration.
+        logger.info("auth.registration_succeeded", {
+            requestId: req.requestId,
+            userId: user._id.toString(),
+            role: user.role
+        });
+
         // Never return the password or password hash.
         return res.status(201).json({
             success: true,
@@ -113,7 +126,12 @@ const register = async (req, res) => {
         });
 
     } catch (error) {
-        console.error("Registration error:", error.message);
+
+        logger.error("auth.registration_failed", {
+            requestId: req.requestId,
+            errorName: error.name,
+            errorMessage: error.message
+        });
 
         // Handle duplicate email errors.
         if (error.code === 11000) {
@@ -136,7 +154,7 @@ const register = async (req, res) => {
 
 const login = async (req, res) => {
     try {
-        const { email, password } = req.body;
+        const { email, password } = req.body || {};
 
         // Validate required fields.
         if (!email || !password) {
@@ -166,6 +184,11 @@ const login = async (req, res) => {
             password.length < 8 ||
             password.length > 128
         ) {
+            logger.warn("auth.login_failed", {
+                requestId: req.requestId,
+                reason: "invalid_password_input"
+            });
+
             return res.status(401).json({
                 success: false,
                 message: "Invalid email or password"
@@ -174,7 +197,11 @@ const login = async (req, res) => {
 
         // Ensure JWT configuration exists before authenticating.
         if (!process.env.JWT_SECRET) {
-            console.error("JWT_SECRET is not configured.");
+
+            logger.error("auth.configuration_error", {
+                requestId: req.requestId,
+                reason: "jwt_secret_not_configured"
+            });
 
             return res.status(500).json({
                 success: false,
@@ -188,6 +215,12 @@ const login = async (req, res) => {
         });
 
         if (!user) {
+
+            logger.warn("auth.login_failed", {
+                requestId: req.requestId,
+                reason: "account_not_found"
+            });
+
             return res.status(401).json({
                 success: false,
                 message: "Invalid email or password"
@@ -201,6 +234,12 @@ const login = async (req, res) => {
         );
 
         if (!passwordMatch) {
+
+            logger.warn("auth.login_failed", {
+                requestId: req.requestId,
+                reason: "password_mismatch"
+            });
+
             return res.status(401).json({
                 success: false,
                 message: "Invalid email or password"
@@ -220,6 +259,14 @@ const login = async (req, res) => {
             }
         );
 
+        // Only record successful login after password verification
+        // and successful token generation.
+        logger.info("auth.login_succeeded", {
+            requestId: req.requestId,
+            userId: user._id.toString(),
+            role: user.role
+        });
+
         return res.status(200).json({
             success: true,
             message: "Login successful",
@@ -233,7 +280,12 @@ const login = async (req, res) => {
         });
 
     } catch (error) {
-        console.error("Login error:", error.message);
+
+        logger.error("auth.login_error", {
+            requestId: req.requestId,
+            errorName: error.name,
+            errorMessage: error.message
+        });
 
         return res.status(500).json({
             success: false,
