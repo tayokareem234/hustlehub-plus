@@ -376,10 +376,10 @@ useEffect(() => {
 
     const price = Number(serviceForm.price);
 
-    if (!Number.isFinite(price) || price <= 0) {
-      setServiceError("Enter a valid price greater than zero.");
-      return;
-    }
+   if (!Number.isFinite(price) || price < 0.01) {
+    setServiceError("Enter a valid price of at least R0.01.");
+    return;
+}
 
     setServiceSubmitting(true);
 

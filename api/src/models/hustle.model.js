@@ -20,11 +20,11 @@ const hustleSchema = new mongoose.Schema(
             trim: true
         },
 
-        price: {
-            type: Number,
-            required: true,
-            min: 0
-        },
+price: {
+    type: Number,
+    required: true,
+    min: 0.01
+},
 
         location: {
             type: String,
