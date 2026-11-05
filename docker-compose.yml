@@ -15,6 +15,9 @@ services:
       MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USERNAME:?Set MONGO_ROOT_USERNAME}
       MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD:?Set MONGO_ROOT_PASSWORD}
 
+      # Work around MongoDB TCMalloc/RSEQ incompatibility on newer Linux kernels.
+      GLIBC_TUNABLES: "glibc.pthread.rseq=1"
+
     volumes:
       - mongodb_data:/data/db
 
