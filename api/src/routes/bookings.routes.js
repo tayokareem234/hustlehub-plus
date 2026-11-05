@@ -48,6 +48,7 @@ router.post(
 router.patch(
     "/:id/cancel",
     authenticate,
+    bookingLimiter,
     bookingsController.cancelBooking
 );
 

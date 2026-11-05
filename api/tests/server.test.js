@@ -180,5 +180,39 @@ describe("HustleHub+ Backend API", () => {
         expect(response.status).toBe(403);
 
     });
+    // ========================================
+// TEST 9: BOOKING RATE LIMITING
+// ========================================
+
+test("Booking cancellation requests are rate limited", async () => {
+
+    const clientToken = createTestToken("client");
+
+    const responses = [];
+
+    // Send 21 requests from the same test client.
+    for (let i = 0; i < 21; i++) {
+
+        const response = await request(app)
+            .patch("/api/bookings/not-a-valid-id/cancel")
+            .set("Authorization", `Bearer ${clientToken}`);
+
+        responses.push(response);
+    }
+
+    // The first 20 requests must not be rate limited.
+    responses.slice(0, 20).forEach((response) => {
+        expect(response.status).not.toBe(429);
+    });
+
+    // The 21st request must be rejected.
+    expect(responses[20].status).toBe(429);
+
+    expect(responses[20].body.success).toBe(false);
+
+    expect(responses[20].body.message)
+        .toBe("Too many booking requests. Please try again later.");
+
+});
 
 });
