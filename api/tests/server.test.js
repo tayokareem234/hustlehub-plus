@@ -200,14 +200,16 @@ test("Booking cancellation requests are rate limited", async () => {
         responses.push(response);
     }
 
-    // The first 20 requests must not be rate limited.
+    // The first 20 requests should pass the rate limiter
+    // but fail validation because the booking ID is invalid.
     responses.slice(0, 20).forEach((response) => {
-        expect(response.status).not.toBe(429);
+        expect(response.status).toBe(400);
+        expect(response.body.success).toBe(false);
+        expect(response.body.message).toBe("Invalid booking ID");
     });
 
-    // The 21st request must be rejected.
+    // The 21st request should be blocked by the rate limiter.
     expect(responses[20].status).toBe(429);
-
     expect(responses[20].body.success).toBe(false);
 
     expect(responses[20].body.message)

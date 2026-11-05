@@ -448,10 +448,20 @@ const getFreelancerIncome = async (req, res) => {
 
 const cancelBooking = async (req, res) => {
     try {
-        const { id } = req.params;
+        
 
         // Find the booking.
-        const booking = await Booking.findById(id);
+        // Validate the booking ID before querying MongoDB.
+        const bookingId = req.params.id;
+
+        if (!/^[0-9a-fA-F]{24}$/.test(bookingId)) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid booking ID"
+            });
+        }
+
+        const booking = await Booking.findById(bookingId);
 
         if (!booking) {
             return res.status(404).json({
