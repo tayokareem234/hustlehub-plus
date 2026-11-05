@@ -1,8 +1,7 @@
 {
   "info": {
-    "_postman_id": "c7b0a6d1-5a7d-4b89-ae5c-1f21a8c31002",
     "name": "HustleHub+ - Part 2 API Tests",
-    "description": "Automated API tests for authentication, authorization, marketplace services, bookings, validation, and security headers. Intended for execution using Postman or Newman.",
+    "description": "Automated API tests for marketplace availability, authentication, role-based access control, booking lifecycle, validation, and security headers. Run against a local development backend.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -11,24 +10,8 @@
       "value": "https://localhost:3000"
     },
     {
-      "key": "clientToken",
-      "value": ""
-    },
-    {
-      "key": "freelancerToken",
-      "value": ""
-    },
-    {
-      "key": "adminToken",
-      "value": ""
-    },
-    {
-      "key": "hustleId",
-      "value": ""
-    },
-    {
-      "key": "bookingId",
-      "value": ""
+      "key": "testPassword",
+      "value": "TestPassword123!"
     },
     {
       "key": "clientEmail",
@@ -39,8 +22,24 @@
       "value": ""
     },
     {
-      "key": "testPassword",
-      "value": "TestPassword123!"
+      "key": "missingFieldEmail",
+      "value": ""
+    },
+    {
+      "key": "clientToken",
+      "value": ""
+    },
+    {
+      "key": "freelancerToken",
+      "value": ""
+    },
+    {
+      "key": "hustleId",
+      "value": ""
+    },
+    {
+      "key": "bookingId",
+      "value": ""
     }
   ],
   "item": [
@@ -60,13 +59,8 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('Health endpoint returns success', function () {",
-                  "    pm.expect(pm.response.code).to.be.oneOf([200, 204]);",
-                  "});",
-                  "pm.test('Security headers are present', function () {",
-                  "    pm.expect(pm.response.headers.get('X-Content-Type-Options')).to.exist;",
-                  "    pm.expect(pm.response.headers.get('Content-Security-Policy')).to.exist;",
-                  "});"
+                  "pm.test('Health endpoint returns success', function () { pm.expect(pm.response.code).to.equal(200); });",
+                  "pm.test('Security headers are present', function () { pm.expect(pm.response.headers.has('X-Content-Type-Options')).to.be.true; pm.expect(pm.response.headers.has('Content-Security-Policy')).to.be.true; });"
                 ]
               }
             }
@@ -85,21 +79,8 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('Marketplace responds successfully', function () {",
-                  "    pm.expect(pm.response.code).to.equal(200);",
-                  "});",
-                  "pm.test('Response contains the success property', function () {",
-                  "    const body = pm.response.json();",
-                  "    pm.expect(body).to.have.property('success');",
-                  "    pm.expect(body.success).to.equal(true);",
-                  "});",
-                  "pm.test('Response contains the hustles array', function () {",
-                  "    const body = pm.response.json();",
-                  "    pm.expect(body.hustles).to.be.an('array');",
-                  "    if (body.hustles.length > 0) {",
-                  "        pm.collectionVariables.set('hustleId', body.hustles[0]._id);",
-                  "    }",
-                  "});"
+                  "pm.test('Marketplace responds successfully', function () { pm.expect(pm.response.code).to.equal(200); });",
+                  "pm.test('Response contains success and hustles', function () { const b=pm.response.json(); pm.expect(b.success).to.equal(true); pm.expect(b.hustles).to.be.an('array'); });"
                 ]
               }
             }
@@ -120,11 +101,16 @@
                 "value": "application/json"
               }
             ],
+            "url": "{{baseUrl}}/api/auth/register",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Postman Test Client\",\n  \"email\": \"{{clientEmail}}\",\n  \"password\": \"{{testPassword}}\",\n  \"role\": \"client\"\n}"
-            },
-            "url": "{{baseUrl}}/api/auth/register"
+              "raw": "{\n  \"name\": \"Newman Test Client\",\n  \"email\": \"{{clientEmail}}\",\n  \"password\": \"{{testPassword}}\",\n  \"role\": \"client\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
           },
           "event": [
             {
@@ -132,7 +118,7 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.collectionVariables.set('clientEmail', 'postman.client.' + Date.now() + '@example.com');"
+                  "pm.collectionVariables.set('clientEmail', 'newman.client.' + Date.now() + '@example.com');"
                 ]
               }
             },
@@ -141,12 +127,8 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('Client registration succeeds', function () {",
-                  "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
-                  "});",
-                  "pm.test('Registration returns a success response', function () {",
-                  "    pm.expect(pm.response.json().success).to.equal(true);",
-                  "});"
+                  "pm.test('Client registration succeeds', function () { pm.expect(pm.response.code).to.be.oneOf([200,201]); });",
+                  "pm.test('Registration returns success', function () { pm.expect(pm.response.json().success).to.equal(true); });"
                 ]
               }
             }
@@ -162,11 +144,16 @@
                 "value": "application/json"
               }
             ],
+            "url": "{{baseUrl}}/api/auth/login",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"{{clientEmail}}\",\n  \"password\": \"{{testPassword}}\"\n}"
-            },
-            "url": "{{baseUrl}}/api/auth/login"
+              "raw": "{\n  \"email\": \"{{clientEmail}}\",\n  \"password\": \"{{testPassword}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
           },
           "event": [
             {
@@ -174,201 +161,90 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('Client login succeeds', function () {",
-                  "    pm.expect(pm.response.code).to.equal(200);",
-                  "});",
-                  "pm.test('Login returns a JWT', function () {",
-                  "    const body = pm.response.json();",
-                  "    pm.expect(body.token).to.be.a('string').and.not.empty;",
-                  "    pm.collectionVariables.set('clientToken', body.token);",
-                  "});",
-                  "pm.test('Login returns the expected client role', function () {",
-                  "    pm.expect(pm.response.json().user.role).to.equal('client');",
-                  "});"
+                  "pm.test('Client login succeeds', function () { pm.expect(pm.response.code).to.equal(200); });",
+                  "pm.test('Client JWT and role are stored', function () { const b=pm.response.json(); pm.expect(b.token).to.be.a('string').and.not.empty; pm.expect(b.user.role).to.equal('client'); pm.collectionVariables.set('clientToken',b.token); });"
                 ]
               }
             }
           ]
         },
         {
-  "name": "Register freelancer",
-  "request": {
-    "method": "POST",
-    "header": [
-      {
-        "key": "Content-Type",
-        "value": "application/json"
-      }
-    ],
-    "body": {
-      "mode": "raw",
-      "raw": "{\n  \"name\": \"Postman Test Freelancer\",\n  \"email\": \"{{freelancerEmail}}\",\n  \"password\": \"{{testPassword}}\",\n  \"role\": \"freelancer\"\n}"
-    },
-    "url": "{{baseUrl}}/api/auth/register"
-  },
-  "event": [
-    {
-      "listen": "prerequest",
-      "script": {
-        "type": "text/javascript",
-        "exec": [
-          "pm.collectionVariables.set('freelancerEmail', 'postman.freelancer.' + Date.now() + '@example.com');"
-        ]
-      }
-    },
-    {
-      "listen": "test",
-      "script": {
-        "type": "text/javascript",
-        "exec": [
-          "pm.test('Freelancer registration succeeds', function () {",
-          "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
-          "    pm.expect(pm.response.json().success).to.equal(true);",
-          "});"
-        ]
-      }
-    }
-  ]
-},
-
-{
-  "name": "05 - Booking Lifecycle",
-  "item": [
-    {
-      "name": "Client creates a booking",
-      "request": {
-        "method": "POST",
-        "header": [
-          {
-            "key": "Authorization",
-            "value": "Bearer {{clientToken}}"
+          "name": "Register freelancer",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/auth/register",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Newman Test Freelancer\",\n  \"email\": \"{{freelancerEmail}}\",\n  \"password\": \"{{testPassword}}\",\n  \"role\": \"freelancer\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
           },
-          {
-            "key": "Content-Type",
-            "value": "application/json"
-          }
-        ],
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"hustleId\": \"{{hustleId}}\"\n}"
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.set('freelancerEmail', 'newman.freelancer.' + Date.now() + '@example.com');"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Freelancer registration succeeds', function () { pm.expect(pm.response.code).to.be.oneOf([200,201]); });",
+                  "pm.test('Registration returns success', function () { pm.expect(pm.response.json().success).to.equal(true); });"
+                ]
+              }
+            }
+          ]
         },
-        "url": "{{baseUrl}}/api/bookings"
-      },
-      "event": [
         {
-          "listen": "test",
-          "script": {
-            "type": "text/javascript",
-            "exec": [
-              "pm.test('Client can create a booking', function () {",
-              "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
-              "});",
-              "pm.test('Booking response contains an ID', function () {",
-              "    const body = pm.response.json();",
-              "    const booking = body.booking || body.data || body;",
-              "    const id = booking._id || booking.id;",
-              "    pm.expect(id).to.exist;",
-              "    pm.collectionVariables.set('bookingId', id);",
-              "});"
-            ]
-          }
-        }
-      ]
-    },
-    {
-      "name": "Client retrieves their bookings",
-      "request": {
-        "method": "GET",
-        "header": [
-          {
-            "key": "Authorization",
-            "value": "Bearer {{clientToken}}"
-          }
-        ],
-        "url": "{{baseUrl}}/api/bookings/client"
-      },
-      "event": [
-        {
-          "listen": "test",
-          "script": {
-            "type": "text/javascript",
-            "exec": [
-              "pm.test('Client bookings endpoint succeeds', function () {",
-              "    pm.expect(pm.response.code).to.equal(200);",
-              "});",
-              "pm.test('Bookings response is JSON', function () {",
-              "    pm.expect(function () { pm.response.json(); }).not.to.throw();",
-              "});"
-            ]
-          }
-        }
-      ]
-    },
-    {
-      "name": "Client cancels their booking",
-      "request": {
-        "method": "PATCH",
-        "header": [
-          {
-            "key": "Authorization",
-            "value": "Bearer {{clientToken}}"
-          }
-        ],
-        "url": "{{baseUrl}}/api/bookings/{{bookingId}}/cancel"
-      },
-      "event": [
-        {
-          "listen": "test",
-          "script": {
-            "type": "text/javascript",
-            "exec": [
-              "pm.test('Client can cancel their booking', function () {",
-              "    pm.expect(pm.response.code).to.be.oneOf([200, 204]);",
-              "});"
-            ]
-          }
-        }
-      ]
-    }
-  ]
-},
-
-{
-  "name": "Login freelancer",
-  "request": {
-    "method": "POST",
-    "header": [
-      {
-        "key": "Content-Type",
-        "value": "application/json"
-      }
-    ],
-    "body": {
-      "mode": "raw",
-      "raw": "{\n  \"email\": \"{{freelancerEmail}}\",\n  \"password\": \"{{testPassword}}\"\n}"
-    },
-    "url": "{{baseUrl}}/api/auth/login"
-  },
-  "event": [
-    {
-      "listen": "test",
-      "script": {
-        "type": "text/javascript",
-        "exec": [
-          "pm.test('Freelancer login succeeds', function () {",
-          "    pm.expect(pm.response.code).to.equal(200);",
-          "});",
-          "pm.test('Freelancer JWT is stored', function () {",
-          "    const body = pm.response.json();",
-          "    pm.expect(body.token).to.be.a('string').and.not.empty;",
-          "    pm.expect(body.user.role).to.equal('freelancer');",
-          "    pm.collectionVariables.set('freelancerToken', body.token);",
-          "});"
-        ]
-      }
-    }
-  ]
-},
+          "name": "Login freelancer",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/auth/login",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{freelancerEmail}}\",\n  \"password\": \"{{testPassword}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Freelancer login succeeds', function () { pm.expect(pm.response.code).to.equal(200); });",
+                  "pm.test('Freelancer JWT and role are stored', function () { const b=pm.response.json(); pm.expect(b.token).to.be.a('string').and.not.empty; pm.expect(b.user.role).to.equal('freelancer'); pm.collectionVariables.set('freelancerToken',b.token); });"
+                ]
+              }
+            }
+          ]
+        },
         {
           "name": "Reject invalid login",
           "request": {
@@ -379,36 +255,16 @@
                 "value": "application/json"
               }
             ],
+            "url": "{{baseUrl}}/api/auth/login",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"invalid.user@example.com\",\n  \"password\": \"IncorrectPassword123!\"\n}"
-            },
-            "url": "{{baseUrl}}/api/auth/login"
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('Invalid login is rejected', function () {",
-                  "    pm.expect(pm.response.code).to.be.oneOf([400, 401, 422]);",
-                  "});",
-                  "pm.test('Invalid login does not return a token', function () {",
-                  "    const body = pm.response.json();",
-                  "    pm.expect(body.token).to.be.undefined;",
-                  "});"
-                ]
+              "raw": "{\n  \"email\": \"nobody.invalid@example.com\",\n  \"password\": \"WrongPassword123!\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
               }
             }
-          ]
-        },
-        {
-          "name": "Reject protected request without JWT",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": "{{baseUrl}}/api/bookings/client"
           },
           "event": [
             {
@@ -416,35 +272,8 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('Protected endpoint rejects missing JWT', function () {",
-                  "    pm.expect(pm.response.code).to.equal(401);",
-                  "});"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "Reject protected request with invalid JWT",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer invalid.test.token"
-              }
-            ],
-            "url": "{{baseUrl}}/api/bookings/client"
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('Protected endpoint rejects invalid JWT', function () {",
-                  "    pm.expect(pm.response.code).to.equal(401);",
-                  "});"
+                  "pm.test('Invalid login is rejected', function () { pm.expect(pm.response.code).to.be.oneOf([400,401,422]); });",
+                  "pm.test('Invalid login does not return a token', function () { const b=pm.response.json(); pm.expect(b.token).to.be.undefined; });"
                 ]
               }
             }
@@ -456,7 +285,45 @@
       "name": "03 - Role-Based Access Control",
       "item": [
         {
-          "name": "Client cannot create a hustle",
+          "name": "Freelancer creates a service",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{freelancerToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/hustles",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Newman Automated Test Service\",\n  \"description\": \"Service created by the automated API test suite.\",\n  \"category\": \"Development\",\n  \"price\": 150,\n  \"location\": \"Pretoria\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Freelancer can create a service', function () { pm.expect(pm.response.code).to.be.oneOf([200,201]); });",
+                  "pm.test('Created service ID is stored', function () { const b=pm.response.json(); const h=b.hustle || b.data || b; const id=h._id || h.id; pm.expect(id).to.exist; pm.collectionVariables.set('hustleId',id); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Client cannot create a service",
           "request": {
             "method": "POST",
             "header": [
@@ -469,11 +336,16 @@
                 "value": "application/json"
               }
             ],
+            "url": "{{baseUrl}}/api/hustles",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"title\": \"Unauthorized Service\",\n  \"description\": \"This should be rejected.\",\n  \"category\": \"Development\",\n  \"price\": 100,\n  \"location\": \"Pretoria\"\n}"
-            },
-            "url": "{{baseUrl}}/api/hustles"
+              "raw": "{\n  \"title\": \"Forbidden Client Service\",\n  \"description\": \"Client should not be allowed to create this.\",\n  \"category\": \"Development\",\n  \"price\": 100,\n  \"location\": \"Pretoria\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
           },
           "event": [
             {
@@ -481,55 +353,12 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('Client cannot create a service', function () {",
-                  "    pm.expect(pm.response.code).to.equal(403);",
-                  "});"
+                  "pm.test('Client is forbidden from creating a service', function () { pm.expect(pm.response.code).to.equal(403); });"
                 ]
               }
             }
           ]
         },
-
-        {
-  "name": "Freelancer creates a service",
-  "request": {
-    "method": "POST",
-    "header": [
-      {
-        "key": "Authorization",
-        "value": "Bearer {{freelancerToken}}"
-      },
-      {
-        "key": "Content-Type",
-        "value": "application/json"
-      }
-    ],
-    "body": {
-      "mode": "raw",
-      "raw": "{\n  \"title\": \"Newman Automated Test Service\",\n  \"description\": \"Service created by the automated API test suite.\",\n  \"category\": \"Development\",\n  \"price\": 150,\n  \"location\": \"Pretoria\"\n}"
-    },
-    "url": "{{baseUrl}}/api/hustles"
-  },
-  "event": [
-    {
-      "listen": "test",
-      "script": {
-        "type": "text/javascript",
-        "exec": [
-          "pm.test('Freelancer can create a service', function () {",
-          "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
-          "});",
-          "pm.test('Created service has an ID', function () {",
-          "    const body = pm.response.json();",
-          "    const hustle = body.hustle || body.data || body;",
-          "    pm.expect(hustle._id || hustle.id).to.exist;",
-          "    pm.collectionVariables.set('hustleId', hustle._id || hustle.id);",
-          "});"
-        ]
-      }
-    }
-  ]
-},
         {
           "name": "Client cannot access freelancer bookings",
           "request": {
@@ -548,9 +377,7 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('Client is denied freelancer bookings', function () {",
-                  "    pm.expect(pm.response.code).to.equal(403);",
-                  "});"
+                  "pm.test('Client is denied freelancer bookings', function () { pm.expect(pm.response.code).to.equal(403); });"
                 ]
               }
             }
@@ -574,18 +401,21 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('Client is denied freelancer income', function () {",
-                  "    pm.expect(pm.response.code).to.equal(403);",
-                  "});"
+                  "pm.test('Client is denied freelancer income', function () { pm.expect(pm.response.code).to.equal(403); });"
                 ]
               }
             }
           ]
-        },
+        }
+      ]
+    },
+    {
+      "name": "04 - Booking Lifecycle",
+      "item": [
         {
-          "name": "Client cannot cancel another booking using an invalid ID",
+          "name": "Client creates a booking",
           "request": {
-            "method": "PATCH",
+            "method": "POST",
             "header": [
               {
                 "key": "Authorization",
@@ -596,11 +426,16 @@
                 "value": "application/json"
               }
             ],
+            "url": "{{baseUrl}}/api/bookings",
             "body": {
               "mode": "raw",
-              "raw": "{}"
-            },
-            "url": "{{baseUrl}}/api/bookings/000000000000000000000000/cancel"
+              "raw": "{\n  \"hustleId\": \"{{hustleId}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
           },
           "event": [
             {
@@ -608,9 +443,105 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('Invalid booking ID is rejected', function () {",
-                  "    pm.expect(pm.response.code).to.be.oneOf([400, 404]);",
-                  "});"
+                  "pm.test('Client can create a booking', function () { pm.expect(pm.response.code).to.be.oneOf([200,201]); });",
+                  "pm.test('Booking ID is stored', function () { const b=pm.response.json(); const x=b.booking || b.data || b; const id=x._id || x.id; pm.expect(id).to.exist; pm.collectionVariables.set('bookingId',id); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Client retrieves their bookings",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{clientToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/bookings/client"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Client bookings endpoint succeeds', function () { pm.expect(pm.response.code).to.equal(200); });",
+                  "pm.test('Client bookings response is JSON', function () { pm.expect(pm.response.json()).to.be.an('object'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Freelancer retrieves their bookings",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{freelancerToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/bookings/freelancer"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Freelancer bookings endpoint succeeds', function () { pm.expect(pm.response.code).to.equal(200); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Freelancer retrieves income",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{freelancerToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/bookings/freelancer/income"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Freelancer income endpoint succeeds', function () { pm.expect(pm.response.code).to.equal(200); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Client cancels their booking",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{clientToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/bookings/{{bookingId}}/cancel"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Client can cancel their booking', function () { pm.expect(pm.response.code).to.be.oneOf([200,204]); });"
                 ]
               }
             }
@@ -619,8 +550,51 @@
       ]
     },
     {
-      "name": "04 - Validation",
+      "name": "05 - Validation and Token Security",
       "item": [
+        {
+          "name": "Reject protected request without JWT",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/bookings/client"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Protected endpoint rejects missing JWT', function () { pm.expect(pm.response.code).to.equal(401); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Reject protected request with invalid JWT",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer invalid.token.value"
+              }
+            ],
+            "url": "{{baseUrl}}/api/bookings/client"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Protected endpoint rejects invalid JWT', function () { pm.expect(pm.response.code).to.equal(401); });"
+                ]
+              }
+            }
+          ]
+        },
         {
           "name": "Reject registration with missing fields",
           "request": {
@@ -631,21 +605,33 @@
                 "value": "application/json"
               }
             ],
+            "url": "{{baseUrl}}/api/auth/register",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"missing.name@example.com\",\n  \"password\": \"TestPassword123!\"\n}"
-            },
-            "url": "{{baseUrl}}/api/auth/register"
+              "raw": "{\n  \"email\": \"{{missingFieldEmail}}\",\n  \"password\": \"{{testPassword}}\",\n  \"role\": \"client\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
           },
           "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.set('missingFieldEmail', 'newman.missing.' + Date.now() + '@example.com');"
+                ]
+              }
+            },
             {
               "listen": "test",
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('Registration with missing name is rejected', function () {",
-                  "    pm.expect(pm.response.code).to.be.oneOf([400, 422]);",
-                  "});"
+                  "pm.test('Missing name is rejected', function () { pm.expect(pm.response.code).to.be.oneOf([400,422]); });"
                 ]
               }
             }
@@ -665,11 +651,16 @@
                 "value": "application/json"
               }
             ],
+            "url": "{{baseUrl}}/api/hustles",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"title\": \"Invalid Price Service\",\n  \"description\": \"A service with an invalid price.\",\n  \"category\": \"Development\",\n  \"price\": -100,\n  \"location\": \"Pretoria\"\n}"
-            },
-            "url": "{{baseUrl}}/api/hustles"
+              "raw": "{\n  \"title\": \"Invalid Negative Price Service\",\n  \"description\": \"This service must be rejected.\",\n  \"category\": \"Development\",\n  \"price\": -50,\n  \"location\": \"Pretoria\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
           },
           "event": [
             {
@@ -677,13 +668,287 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('Negative hustle price is rejected', function () {",
-                  "    pm.expect(pm.response.code).to.be.oneOf([400, 422]);",
-                  "});"
+                  "pm.test('Negative price is rejected', function () { pm.expect(pm.response.code).to.be.oneOf([400,422]); });"
                 ]
               }
             }
           ]
+        },
+        {
+          "name": "Reject invalid booking ID",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{clientToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/bookings/000000000000000000000000/cancel"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Invalid booking ID is rejected after authentication', function () { pm.expect(pm.response.code).to.be.oneOf([400,404]); });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "06 - Health Monitoring",
+      "description": "Tests API liveness and MongoDB readiness.",
+      "item": [
+        {
+          "name": "API liveness",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/health/live",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('API liveness returns HTTP 200', function () { pm.expect(pm.response.code).to.equal(200); });",
+                  "pm.test('API confirms it is running', function () { const b = pm.response.json(); pm.expect(b.success).to.equal(true); pm.expect(b.message).to.include('running'); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "API and database readiness",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/health/ready",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('API readiness returns HTTP 200', function () { pm.expect(pm.response.code).to.equal(200); });",
+                  "pm.test('Application reports ready status', function () { const b = pm.response.json(); pm.expect(b.status).to.equal('ready'); });",
+                  "pm.test('MongoDB connection is healthy', function () { const b = pm.response.json(); pm.expect(b.checks.database.status).to.equal('connected'); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "07 - Rate Limiting",
+      "description": "Confirms authentication requests are limited to 10 within the configured window. Requires a fresh API process before execution.",
+      "item": [
+        {
+          "name": "Authentication rate-limit attempt 7",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/api/auth/login",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\":\"rate.limit.probe@example.com\",\"password\":\"IncorrectPassword123!\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Authentication request 7 is processed before the limit', function () { pm.expect(pm.response.code).to.equal(401); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Authentication rate-limit attempt 8",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/api/auth/login",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\":\"rate.limit.probe@example.com\",\"password\":\"IncorrectPassword123!\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Authentication request 8 is processed before the limit', function () { pm.expect(pm.response.code).to.equal(401); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Authentication rate-limit attempt 9",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/api/auth/login",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\":\"rate.limit.probe@example.com\",\"password\":\"IncorrectPassword123!\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Authentication request 9 is processed before the limit', function () { pm.expect(pm.response.code).to.equal(401); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Authentication rate-limit attempt 10",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/api/auth/login",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\":\"rate.limit.probe@example.com\",\"password\":\"IncorrectPassword123!\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Authentication request 10 is processed before the limit', function () { pm.expect(pm.response.code).to.equal(401); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Authentication rate-limit attempt 11",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/api/auth/login",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\":\"rate.limit.probe@example.com\",\"password\":\"IncorrectPassword123!\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Eleventh authentication request is rate limited', function () { pm.expect(pm.response.code).to.equal(429); });",
+                  "pm.test('Rate limit returns an explanatory message', function () { const b = pm.response.json(); pm.expect(b.message).to.include('Too many authentication requests'); });"
+                ]
+              }
+            }
+          ],
+          "response": []
         }
       ]
     }
